@@ -1,4 +1,4 @@
-FROM ballerina/ballerina:2201.0.0
+FROM ballerina/ballerina:2201.12.7
 LABEL maintainer="sabtharugc0@gmail.com"
 ADD target/bin/ballerina_sts.jar /home/ballerina/ballerina_sts.jar
 ADD cert/private.key /home/ballerina/cert/private.key

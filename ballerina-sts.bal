@@ -1,8 +1,9 @@
 import ballerina/http;
+import ballerina/lang.runtime;
 import ballerina/log;
 import ballerina/regex;
-import ballerina/uuid;
 import ballerina/url;
+import ballerina/uuid;
 
 type User record {|
     string username;
@@ -27,13 +28,13 @@ const GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
 const GRANT_TYPE_JWT_BEARER = "urn:ietf:params:oauth:grant-type:jwt-bearer";
 
 // Mock user store.
-User[] userStore = [
+isolated User[] userStore = [
     {username: USERNAME, password: PASSWORD},
     {username: "sabthar", password: "E2%I1^@N8>Wn+3=QL?M!{gh=l4<u"} // password with special characters
 ];
 
-string[] accessTokenStore = ["56ede317-4511-44b4-8579-a08f094ee8c5"];
-string[] refreshTokenStore = ["24f19603-8565-4b5f-a036-88a945e1f272"];
+isolated string[] accessTokenStore = ["56ede317-4511-44b4-8579-a08f094ee8c5"];
+isolated string[] refreshTokenStore = ["24f19603-8565-4b5f-a036-88a945e1f272"];
 
 // The mock authorization server, which is capable of issuing access tokens with related to the grant type and
 // also of refreshing the already-issued access tokens. Also, capable of introspection the access tokens.
@@ -55,7 +56,10 @@ service /oauth2 on sts1, sts2 {
     }
 
     // This issues an access token with reference to the received grant type (client credentials, password and refresh token grant type).
-    resource function post token(http:Request req) returns json|http:Unauthorized|http:BadRequest|http:InternalServerError {
+    resource function post token(http:Request req, @http:Header {name: "X-Delay"} decimal? delay = ()) returns json|http:Unauthorized|http:BadRequest|http:InternalServerError {
+        if delay is decimal && delay > 0.0d {
+            runtime:sleep(delay);
+        }
         var authorizationHeader = req.getHeader("Authorization");
         if authorizationHeader is string {
             if isAuthorizedTokenClient(authorizationHeader) {
@@ -140,7 +144,10 @@ service /oauth2 on sts1, sts2 {
         }
     }
 
-    resource function post introspect(http:Request req) returns json|http:Unauthorized|http:BadRequest {
+    resource function post introspect(http:Request req, @http:Header {name: "X-Delay"} decimal? delay = ()) returns json|http:Unauthorized|http:BadRequest {
+        if delay is decimal && delay > 0.0d {
+            runtime:sleep(delay);
+        }
         var authorizationHeader = req.getHeader("Authorization");
         if authorizationHeader is string {
             if isAuthorizedIntrospectionClient(authorizationHeader) {
@@ -177,29 +184,31 @@ service /oauth2 on sts1, sts2 {
     // https://tools.ietf.org/html/rfc7517#section-5
     resource function get jwks() returns json {
         json jwks = {
-            "keys": [{
-                "kty": "EC",
-                "crv": "P-256",
-                "x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-                "y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
-                "use": "enc",
-                "kid": "1"
-            },
-            {
-                "kty": "RSA",
-                "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
-                "e": "AQAB",
-                "alg": "RS256",
-                "kid": "2011-04-29"
-            },
-            {
-                "kty": "RSA",
-                "e": "AQAB",
-                "use": "sig",
-                "kid": "NTAxZmMxNDMyZDg3MTU1ZGM0MzEzODJhZWI4NDNlZDU1OGFkNjFiMQ",
-                "alg": "RS256",
-                "n": "AIFcoun1YlS4mShJ8OfcczYtZXGIes_XWZ7oPhfYCqhSIJnXD3vqrUu4GXNY2E41jAm8dd7BS5GajR3g1GnaZrSqN0w3bjpdbKjOnM98l2-i9-JP5XoedJsyDzZmml8Xd7zkKCuDqZIDtZ99poevrZKd7Gx5n2Kg0K5FStbZmDbTyX30gi0_griIZyVCXKOzdLp2sfskmTeu_wF_vrCaagIQCGSc60Yurnjd0RQiMWA10jL8axJjnZ-IDgtKNQK_buQafTedrKqhmzdceozSot231I9dth7uXvmPSjpn23IYUIpdj_NXCIt9FSoMg5-Q3lhLg6GK3nZOPuqgGa8TMPs="
-            }]
+            "keys": [
+                {
+                    "kty": "EC",
+                    "crv": "P-256",
+                    "x": "MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
+                    "y": "4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
+                    "use": "enc",
+                    "kid": "1"
+                },
+                {
+                    "kty": "RSA",
+                    "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+                    "e": "AQAB",
+                    "alg": "RS256",
+                    "kid": "2011-04-29"
+                },
+                {
+                    "kty": "RSA",
+                    "e": "AQAB",
+                    "use": "sig",
+                    "kid": "NTAxZmMxNDMyZDg3MTU1ZGM0MzEzODJhZWI4NDNlZDU1OGFkNjFiMQ",
+                    "alg": "RS256",
+                    "n": "AIFcoun1YlS4mShJ8OfcczYtZXGIes_XWZ7oPhfYCqhSIJnXD3vqrUu4GXNY2E41jAm8dd7BS5GajR3g1GnaZrSqN0w3bjpdbKjOnM98l2-i9-JP5XoedJsyDzZmml8Xd7zkKCuDqZIDtZ99poevrZKd7Gx5n2Kg0K5FStbZmDbTyX30gi0_griIZyVCXKOzdLp2sfskmTeu_wF_vrCaagIQCGSc60Yurnjd0RQiMWA10jL8axJjnZ-IDgtKNQK_buQafTedrKqhmzdceozSot231I9dth7uXvmPSjpn23IYUIpdj_NXCIt9FSoMg5-Q3lhLg6GK3nZOPuqgGa8TMPs="
+                }
+            ]
         };
         return jwks;
     }
@@ -218,9 +227,9 @@ function prepareTokenResponse(string grantType, string username, string password
         if scopes != "" {
             json|error mergedJson = response.mergeJson({"scope": scopes});
             if mergedJson is error {
-                return <http:InternalServerError> {};
+                return <http:InternalServerError>{};
             }
-            return <json> mergedJson;
+            return <json>mergedJson;
         }
         return response;
     } else if grantType == GRANT_TYPE_PASSWORD {
@@ -241,16 +250,20 @@ function prepareTokenResponse(string grantType, string username, string password
             if scopes != "" {
                 json|error mergedJson = response.mergeJson({"scope": scopes});
                 if mergedJson is error {
-                    return <http:InternalServerError> {};
+                    return <http:InternalServerError>{};
                 }
-                return <json> mergedJson;
+                return <json>mergedJson;
             }
             return response;
         }
         string description = "The authenticated client is not authorized to use password grant type.";
         return createUnauthorizedClient(description);
     } else if grantType == GRANT_TYPE_REFRESH_TOKEN {
-        foreach string token in refreshTokenStore {
+        string[] tempRefreshTokenStore;
+        lock {
+            tempRefreshTokenStore = refreshTokenStore.clone();
+        }
+        foreach string token in tempRefreshTokenStore {
             if token == refreshToken {
                 string newAccessToken = uuid:createType4AsString();
                 addToAccessTokenStore(newAccessToken);
@@ -266,9 +279,9 @@ function prepareTokenResponse(string grantType, string username, string password
                 if scopes != "" {
                     json|error mergedJson = response.mergeJson({"scope": scopes});
                     if mergedJson is error {
-                        return <http:InternalServerError> {};
+                        return <http:InternalServerError>{};
                     }
-                    return <json> mergedJson;
+                    return <json>mergedJson;
                 }
                 return response;
             }
@@ -287,9 +300,9 @@ function prepareTokenResponse(string grantType, string username, string password
         if scopes != "" {
             json|error mergedJson = response.mergeJson({"scope": scopes});
             if mergedJson is error {
-                return <http:InternalServerError> {};
+                return <http:InternalServerError>{};
             }
-            return <json> mergedJson;
+            return <json>mergedJson;
         }
         return response;
     }
@@ -298,7 +311,11 @@ function prepareTokenResponse(string grantType, string username, string password
 }
 
 function prepareIntrospectionResponse(string accessToken, string tokenTypeHint) returns json {
-    foreach string token in accessTokenStore {
+    string[] tempAccessTokenStore;
+    lock {
+        tempAccessTokenStore = accessTokenStore.clone();
+    }
+    foreach string token in tempAccessTokenStore {
         if token == accessToken {
             json response = {
                 "active": true,
@@ -336,61 +353,57 @@ function isAuthorizedIntrospectionClient(string authorizationHeader) returns boo
 }
 
 function isValidUser(string username, string password) returns boolean {
-    return userStore.filter(user => user.username == username && user.password == password).length() > 0;
+    lock {
+        return userStore.filter(user => user.username == username && user.password == password).length() > 0;
+    }
 }
 
 function addToAccessTokenStore(string accessToken) {
-    int index = accessTokenStore.length();
-    accessTokenStore[index] = accessToken;
+    lock {
+        int index = accessTokenStore.length();
+        accessTokenStore[index] = accessToken;
+    }
 }
 
 function addToRefreshTokenStore(string refreshToken) {
-    int index = refreshTokenStore.length();
-    refreshTokenStore[index] = refreshToken;
+    lock {
+        int index = refreshTokenStore.length();
+        refreshTokenStore[index] = refreshToken;
+    }
 }
 
 // Error responses. (Refer: https://tools.ietf.org/html/rfc6749#section-5.2)
-function createInvalidClient(string description) returns http:Unauthorized {
-    return {
-        body: {
-            "error": "invalid_client",
-            "error_description": description
-        }
-    };
-}
+function createInvalidClient(string description) returns http:Unauthorized => {
+    body: {
+        "error": "invalid_client",
+        "error_description": description
+    }
+};
 
-function createUnauthorizedClient(string description) returns http:Unauthorized {
-    return {
-        body: {
-            "error": "unauthorized_client",
-            "error_description": description
-        }
-    };
-}
+function createUnauthorizedClient(string description) returns http:Unauthorized => {
+    body: {
+        "error": "unauthorized_client",
+        "error_description": description
+    }
+};
 
-function createInvalidRequest(string description) returns http:BadRequest {
-    return {
-        body: {
-            "error": "invalid_request",
-            "error_description": description
-        }
-    };
-}
+function createInvalidRequest(string description) returns http:BadRequest => {
+    body: {
+        "error": "invalid_request",
+        "error_description": description
+    }
+};
 
-function createInvalidGrant(string description) returns http:BadRequest {
-    return {
-        body: {
-            "error": "invalid_grant",
-            "error_description": description
-        }
-    };
-}
+function createInvalidGrant(string description) returns http:BadRequest => {
+    body: {
+        "error": "invalid_grant",
+        "error_description": description
+    }
+};
 
-function createUnsupportedGrant(string description) returns http:BadRequest {
-    return {
-        body: {
-            "error": "unsupported_grant_type",
-            "error_description": description
-        }
-    };
-}
+function createUnsupportedGrant(string description) returns http:BadRequest => {
+    body: {
+        "error": "unsupported_grant_type",
+        "error_description": description
+    }
+};
